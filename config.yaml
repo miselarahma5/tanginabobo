@@ -158,7 +158,7 @@ display:
   streaming: true
   inline_diffs: true
   show_cost: false
-  skin: default
+  skin: sisyphus
   tool_progress_command: false
   tool_preview_length: 0
   tool_progress: all
@@ -231,7 +231,8 @@ whatsapp: {}
 approvals:
   mode: manual
   timeout: 60
-command_allowlist: []
+command_allowlist:
+- script execution via -e/-c flag
 quick_commands: {}
 personalities: {}
 security:

@@ -516,9 +516,37 @@ terminal(command="tmux new-session -d -s resumed 'hermes --resume 20260225_14305
 3. Load explicitly: `/skill name` or `hermes -s name`
 
 ### Gateway issues
+
+**"Typing" indicator stuck (messaging platforms)**
+
+If your Telegram/Discord/Slack bot shows "typing..." indefinitely but never responds, the gateway is likely stuck on a long-running operation (often vision analysis or browser automation).
+
+Diagnose and fix:
+```bash
+# Check gateway status programmatically
+python3 -c "
+from gateway.status import is_gateway_running, read_runtime_status
+status = read_runtime_status()
+print('Gateway state:', status.get('gateway_state'))
+for name, data in status.get('platforms', {}).items():
+    print(f'{name}: {data.get(\"state\")}')
+"
+
+# If stuck, check for long-running processes
+ps aux | grep -E "(hermes gateway|vision|browser)"
+
+# Force restart the gateway
+pkill -f "hermes gateway"
+sleep 2
+nohup hermes gateway > /tmp/hermes-gateway.log 2>&1 &
+```
+
+The "typing" indicator is controlled by the gateway's message-sending logic. If it stays on, the gateway event loop is blocked or a background task (like vision analysis) hasn't completed.
+
 Check logs first:
 ```bash
 grep -i "failed to send\|error" ~/.hermes/logs/gateway.log | tail -20
+tail -50 /tmp/hermes-gateway.log  # if using nohup
 ```
 
 ---

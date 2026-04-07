@@ -1,0 +1,17 @@
+{
+  "agent_id": "hermes-auto-miner-001",
+  "agent_type": "hermes",
+  "model": "k2.5",
+  "relay_threshold": 0.1,
+  "min_time_remaining": 10,
+  "auto_stake": true,
+  "solver_module": "solver",
+  "log_level": "INFO",
+  "telegram_notifications": {
+    "enabled": false,
+    "bot_token": null,
+    "chat_id": null
+  },
+  "retry_on_error": true,
+  "max_retries": 3
+}

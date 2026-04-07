@@ -1,12 +1,24 @@
 ---
 name: auto-github-backup
-description: Setup automated daily backup ke GitHub repo dengan cronjob
-tags: [backup, github, cronjob, automation]
+description: Setup automated daily COMPLETE backup ke GitHub repo dengan cronjob - include memories, SOUL.md, skills, cron-output, workspace, config
+tags: [backup, github, cronjob, automation, hermes, complete-backup]
 ---
 
-# Auto GitHub Backup
+# Auto GitHub Backup - COMPLETE Edition
 
-Setup automated daily backup ke GitHub repo dengan cronjob.
+Setup automated daily backup lengkap ke GitHub repo dengan cronjob. **Versi ini include SEMUA data penting** termasuk memories (user data) dan SOUL.md (personality).
+
+## Perbedaan dari Backup Biasa
+
+| Data | Backup Biasa | Complete Backup |
+|------|--------------|-----------------|
+| skills/ | ✓ | ✓ (with rsync --delete) |
+| cron-output/ | ✓ | ✓ |
+| workspace/ | ✓ | ✓ |
+| **memories/** (user profile) | ✗ | **✓** |
+| **SOUL.md** (personality) | ✗ | **✓** |
+| **config.yaml** | ✗ | **✓** |
+| **channel_directory.json** | ✗ | **✓** |
 
 ## Langkah-langkah
 
@@ -17,73 +29,176 @@ git init
 git branch -m main
 ```
 
-### 2. Buat file .token (pisahkan dari script)
+### 2. Buat file .token (WAJIB - jangan hardcode!)
 ```bash
-echo "YOUR_GITHUB_TOKEN" > ~/backup-hermes/.token
+echo "ghp_XXXXXXXXXXXXXXXXXXXXXXXX" > ~/backup-hermes/.token
 ```
+Token harus punya scope `repo`. Jangan pernah commit token ke GitHub!
 
-### 3. Buat .gitignore
+### 3. Buat .gitignore lengkap
 ```
+# Jangan backup file ini ke GitHub
 .token
+.env
 *.log
+backup.log
+last_backup.txt
+
+# Jangan backup sensitive data
+memories/*.lock
+sessions/
+auth.json
+checkpoints/
+state.db*
 ```
 
-### 4. Buat backup.sh
+### 4. Buat backup-complete.sh
+
 ```bash
 #!/bin/bash
 
+# Complete Hermes Backup Bot
+# Backup SEMUA data penting: memories, SOUL, skills, cron, workspace, config
+
 BACKUP_DIR=~/backup-hermes
 DATE=$(date +%Y-%m-%d_%H-%M-%S)
-TOKEN=$(cat ~/backup-hermes/.token 2>/dev/null)
+LOG_FILE="$BACKUP_DIR/backup.log"
 
-cd $BACKUP_DIR
+# Token dari file terpisah (jangan hardcode!)
+if [ -f "$BACKUP_DIR/.token" ]; then
+    TOKEN=$(cat "$BACKUP_DIR/.token" 2>/dev/null | tr -d '\n')
+else
+    echo "[ERROR] Token file tidak ditemukan: $BACKUP_DIR/.token"
+    exit 1
+fi
 
-echo "Copying files..."
+cd "$BACKUP_DIR" || exit 1
 
-# Copy data yang mau di-backup
-mkdir -p memory && cp -r ~/.hermes/memory/* memory/ 2>/dev/null
-mkdir -p skills && cp -r ~/.hermes/skills/* skills/ 2>/dev/null
-mkdir -p cron-output && cp -r ~/.hermes/cron/output/* cron-output/ 2>/dev/null
-mkdir -p workspace && cp -r ~/killim workspace/ 2>/dev/null
+echo "========================================" >> "$LOG_FILE"
+echo "Backup dimulai: $DATE" >> "$LOG_FILE"
+echo "========================================" >> "$LOG_FILE"
 
+# 1. BACKUP MEMORY (penting! ada data user)
+echo "[+] Backup memories/..." | tee -a "$LOG_FILE"
+mkdir -p memories
+cp -r ~/.hermes/memories/* memories/ 2>/dev/null && echo "  ✓ memories OK" | tee -a "$LOG_FILE"
+
+# 2. BACKUP SOUL.md (personality agent)
+echo "[+] Backup SOUL.md..." | tee -a "$LOG_FILE"
+cp ~/.hermes/SOUL.md . 2>/dev/null && echo "  ✓ SOUL.md OK" | tee -a "$LOG_FILE"
+
+# 3. BACKUP SKILLS (gunakan rsync untuk handle deletions)
+echo "[+] Backup skills/..." | tee -a "$LOG_FILE"
+mkdir -p skills
+rsync -av --delete ~/.hermes/skills/ skills/ 2>/dev/null && echo "  ✓ skills OK" | tee -a "$LOG_FILE"
+
+# 4. BACKUP CRON OUTPUT
+echo "[+] Backup cron-output/..." | tee -a "$LOG_FILE"
+mkdir -p cron-output
+cp -r ~/.hermes/cron/output/* cron-output/ 2>/dev/null && echo "  ✓ cron-output OK" | tee -a "$LOG_FILE"
+
+# 5. BACKUP WORKSPACE
+echo "[+] Backup workspace/..." | tee -a "$LOG_FILE"
+mkdir -p workspace
+cp -r ~/.hermes/workspace/* workspace/ 2>/dev/null && echo "  ✓ workspace OK" | tee -a "$LOG_FILE"
+
+# 6. BACKUP CONFIG
+echo "[+] Backup config.yaml..." | tee -a "$LOG_FILE"
+cp ~/.hermes/config.yaml . 2>/dev/null && echo "  ✓ config.yaml OK" | tee -a "$LOG_FILE"
+
+# 7. BACKUP CHANNEL DIRECTORY (gateway info)
+echo "[+] Backup channel_directory.json..." | tee -a "$LOG_FILE"
+cp ~/.hermes/channel_directory.json . 2>/dev/null && echo "  ✓ channel_directory OK" | tee -a "$LOG_FILE"
+
+# Git operations
+echo "[+] Git add all..." | tee -a "$LOG_FILE"
 git add -A
-git commit -m "Backup $DATE" --allow-empty
-git push https://${TOKEN}@github.com/USERNAME/REPO.git main --force
 
-echo "Backup completed: $DATE"
+echo "[+] Git commit..." | tee -a "$LOG_FILE"
+git commit -m "Complete backup: $DATE
+
+Backup includes:
+- memories/ (user data)
+- SOUL.md (personality)
+- skills/ (all skills)
+- cron-output/ (scheduled tasks)
+- workspace/ (project files)
+- config.yaml (settings)
+- channel_directory.json (platform config)" --allow-empty 2>&1 | tee -a "$LOG_FILE"
+
+echo "[+] Git push..." | tee -a "$LOG_FILE"
+git push https://${TOKEN}@github.com/USERNAME/REPO.git main --force 2>&1 | tee -a "$LOG_FILE"
+
+if [ $? -eq 0 ]; then
+    echo "✅ Backup BERHASIL: $DATE" | tee -a "$LOG_FILE"
+    echo "Backup completed: $DATE" > last_backup.txt
+else
+    echo "❌ Backup GAGAL: $DATE" | tee -a "$LOG_FILE"
+    exit 1
+fi
+
+echo "========================================" >> "$LOG_FILE"
+echo "" >> "$LOG_FILE"
 ```
+
+Ganti `USERNAME/REPO` dengan repo GitHub lu.
 
 ### 5. Setup git identity
 ```bash
 git config --global user.email "backup-bot@local"
-git config --global user.name "Backup Bot"
+git config --global user.name "Hermes Backup Bot"
 ```
 
 ### 6. Push pertama kali
 ```bash
 cd ~/backup-hermes
-git add -A
-git commit -m "Initial backup setup"
-git remote add origin https://github.com/USERNAME/REPO.git
-git push -f https://TOKEN@github.com/USERNAME/REPO.git main
+chmod +x backup-complete.sh
+bash backup-complete.sh
 ```
 
 ### 7. Buat cronjob harian
 Gunakan tool `cronjob` dengan:
-- schedule: `0 0 * * *` (jam 00:00)
-- prompt: instruksi untuk jalankan backup.sh
+- schedule: `0 0 * * *` (jam 00:00 UTC)
+- prompt: `Jalankan /root/backup-hermes/backup-complete.sh`
 - deliver: telegram (untuk notif sukses/gagal)
 
-## Pitfalls
+## Pitfalls & Solutions
 
-1. **GitHub Push Protection** - GitHub akan menolak push kalau ada token di file. Solusi: simpan token di file terpisah (.token) dan tambahkan ke .gitignore
+1. **Token Security** - Jangan pernah hardcode token di script! Simpan di file `.token` terpisah dan add ke .gitignore
 
-2. **Git identity** - Perlu set user.email dan user.name sebelum commit
+2. **Missing memories/** - Backup biasa sering lupa backup `memories/` (isi user profile). Data ini penting buat agent inget preferensi user!
 
-3. **Embedded git repos** - Kalau backup folder yang ada .git, akan jadi submodule. Tidak masalah tapi perlu di-note.
+3. **Missing SOUL.md** - Personality/persona agent tersimpan di SOUL.md. Kalau ga di-backup, agent kehilangan identitasnya setelah restore
 
-4. **Token scope** - Token harus punya scope `repo`
+4. **Git identity** - Perlu set user.email dan user.name sebelum commit
+
+5. **Token scope** - Token harus punya scope `repo`
+
+6. **rsync untuk skills** - Skills folder bisa besar dan ada file yang dihapus. Gunakan `rsync --delete` biar backup mirror exact state
+
+## Restore dari Backup
+
+```bash
+# Clone backup repo
+git clone https://github.com/USERNAME/REPO.git backup-restore
+cd backup-restore
+
+# Restore ke hermes
+mkdir -p ~/.hermes/memories && cp -r memories/* ~/.hermes/memories/
+cp SOUL.md ~/.hermes/
+cp -r skills/* ~/.hermes/skills/
+cp -r cron-output/* ~/.hermes/cron/output/ 2>/dev/null
+mkdir -p ~/.hermes/workspace && cp -r workspace/* ~/.hermes/workspace/
+cp config.yaml ~/.hermes/ 2>/dev/null
+cp channel_directory.json ~/.hermes/ 2>/dev/null
+
+echo "Restore complete!"
+```
 
 ## Hasil
 
-Backup akan jalan otomatis tiap hari jam 00:00 dan push ke GitHub. Notifikasi dikirim ke platform yang dikonfigurasi.
+- Backup otomatis tiap hari jam 00:00 UTC
+- Notifikasi sukses/gagal ke Telegram (atau platform lain)
+- Include SEMUA data penting: user profile, personality, skills, cron, workspace, config
+- Log lengkap di `backup.log`
+- Timestamp terakhir backup di `last_backup.txt`

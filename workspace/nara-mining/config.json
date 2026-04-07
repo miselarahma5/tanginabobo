@@ -1,0 +1,11 @@
+{
+  "api_url": "https://api.nara-testnet.io",
+  "wallet_count": 20,
+  "active_miners": 20,
+  "mining_interval": 30,
+  "dashboard_interval": 60,
+  "telegram_bot_token": null,
+  "telegram_chat_id": null,
+  "auto_restart": true,
+  "backup_interval": 3600
+}
