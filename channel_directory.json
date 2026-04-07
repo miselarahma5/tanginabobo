@@ -1,0 +1,17 @@
+{
+  "updated_at": "2026-04-07T08:37:00.475194",
+  "platforms": {
+    "telegram": [
+      {
+        "id": "8223539715",
+        "name": "toopex",
+        "type": "dm",
+        "thread_id": null
+      }
+    ],
+    "whatsapp": [],
+    "signal": [],
+    "email": [],
+    "sms": []
+  }
+}

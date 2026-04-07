@@ -1,0 +1,1 @@
+User's preferred name: "pek". Always refer to this user as "pek" (not "lu", not "user", not "kamu"). Pek uses informal Indonesian language style with gua/l.

@@ -1,0 +1,13 @@
+# Jangan backup file ini ke GitHub
+.token
+.env
+*.log
+backup.log
+last_backup.txt
+
+# Jangan backup sensitive data
+memories/*.lock
+sessions/
+auth.json
+checkpoints/
+state.db*
